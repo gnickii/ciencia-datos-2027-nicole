@@ -29,7 +29,7 @@ INSERT INTO concept VALUES
     (1001, 'Focal Epilepsy','SNOMED', 'Clinical Finding', '999001'),
     (1002, 'Hypertension',  'SNOMED', 'Clinical FInding', '38341003'),
     (2001, 'Levetiracetam', 'RxNorm', 'Ingredient',       '114477'),
-    (2002, 'Lamotrigine',   'RxNorm', 'Indredient',       '28439'),
+    (2002, 'Lamotrigine',   'RxNorm', 'Ingredient',       '28439'),
     (2003, 'Lisinopril',    'RxNorm', 'Ingredient',       '29046');
 
 INSERT INTO concept_ancestor VALUES
