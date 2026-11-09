@@ -40,3 +40,16 @@ WITH con_edad AS (
 SELECT *
 FROM con_edad
 WHERE age_at_index >= 18;
+
+
+--Paso 3:Observación continua previa a la fecha índice (365 días)
+CREATE OR REPLACE TABLE cohort_step3 AS
+SELECT s.*
+FROM cohort_step2 AS s
+WHERE EXISTS (
+  SELECT 1
+  FROM observation_period AS op
+  WHERE op.person_id = s.person_id
+    AND op.observation_period_start_date <= s.index_date - INTERVAL 365 DAY
+    AND op.observation_period_end_date >= s.index_date
+);
