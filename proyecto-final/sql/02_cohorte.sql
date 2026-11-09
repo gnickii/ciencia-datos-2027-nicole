@@ -16,3 +16,27 @@ SELECT
 FROM dx_epilepsia
 GROUP BY person_id
 HAVING count(*)>=1;
+
+-- Paso 2: edad en la fecha índice (años completos). Solo se quedan mayores de edad
+CREATE OR REPLACE TABLE cohort_step2 AS
+WITH con_edad AS (
+    SELECT
+        s.person_id,
+        s.index_date,
+        s.n_dx,
+        p.gender_concept_id,
+        date_sub(
+            'year',
+            make_date(
+                p.year_of_birth,
+                coalesce(p.month_of_birth,1),
+                coalesce(p.day_of_birth, 1)
+            ),
+            s.index_date
+        ) AS age_at_index
+        FROM cohort_step1 AS s 
+        JOIN person AS p USING (person_id)
+)
+SELECT *
+FROM con_edad
+WHERE age_at_index >= 18;
