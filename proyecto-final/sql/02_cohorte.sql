@@ -15,7 +15,7 @@ SELECT
     count(*) AS n_dx
 FROM dx_epilepsia
 GROUP BY person_id
-HAVING count(*)>=1;
+HAVING count(*)>= {{min_dx}};
 
 -- Paso 2: edad en la fecha índice (años completos). Solo se quedan mayores de edad
 CREATE OR REPLACE TABLE cohort_step2 AS
@@ -39,7 +39,7 @@ WITH con_edad AS (
 )
 SELECT *
 FROM con_edad
-WHERE age_at_index >= 18;
+WHERE age_at_index >= {{min_age}};
 
 
 --Paso 3:Observación continua previa a la fecha índice (365 días)
@@ -50,8 +50,8 @@ WHERE EXISTS (
   SELECT 1
   FROM observation_period AS op
   WHERE op.person_id = s.person_id
-    AND op.observation_period_start_date <= s.index_date - INTERVAL 365 DAY
-    AND op.observation_period_end_date >= s.index_date
+    AND op.observation_period_start_date <= s.index_date - INTERVAL {{prior_days}} DAY
+      AND op.observation_period_end_date   >= s.index_date
 );
 
 --Paso 4: Inicia un antiepiléptico dentro de los 365 días posteriores a la fecha índice
@@ -65,7 +65,7 @@ WHERE EXISTS (
       ON cs.concept_id = de.drug_concept_id
     WHERE de.person_id =s.person_id 
       AND de.drug_era_start_date >= s.index_date
-      AND de.drug_era_start_date  <= s.index_date + INTERVAL 365 DAY 
+      AND de.drug_era_start_date <= s.index_date + INTERVAL {{followup_days}} DAY
 );
 
 -- Cohorte final: quién cumplió los cuatro criterios
@@ -89,13 +89,13 @@ WITH steps AS (
     SELECT 0 AS step, 'Todas las personas en la base OMOP' AS description,
          (SELECT count(DISTINCT person_id) FROM person) AS n_persons
     UNION ALL 
-    SELECT 1, 'Con al menos 1 diagnóstico de epilepsia', (SELECT count(*) FROM cohort_step1)
+    SELECT 1, 'Con al menos {{min_dx}} diagnóstico(s) de epilepsia', (SELECT count(*) FROM cohort_step1)
     UNION ALL
-    SELECT 2, 'Edad >= 18 años en la fecha índice', (SELECT count(*)FROM cohort_step2)
+    SELECT 2, 'Edad >= {{min_age}} años en la fecha índice', (SELECT count(*)FROM cohort_step2)
     UNION ALL
-    SELECT 3, '>= 365 días de observación previa', (SELECT count(*) FROM cohort_step3)
+    SELECT 3, '>= {{prior_days}} días de observación previa', (SELECT count(*) FROM cohort_step3)
     UNION ALL
-    SELECT 4, 'Antiepiléptico dentro de 365 días tras la fecha índice',
+    SELECT 4, 'Antiepiléptico dentro de {{followup_days}} días tras la fecha índice',
            (SELECT count(*) FROM cohort_step4)
 )
 SELECT 

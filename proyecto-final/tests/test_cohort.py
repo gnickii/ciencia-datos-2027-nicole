@@ -1,11 +1,14 @@
 from pathlib import Path 
+import pytest
+
+from epilepsia_omop.cohort import CohortParams, build_cohort, render_sql
 
 SQL_DIR= Path (__file__).resolve().parents[1]/"sql"
 
 def correr_sql(con, nombre):
-    """Lee un archivo sql y lo corre"""
-    texto= (SQL_DIR/nombre).read_text(encoding="utf-8")
-    con.execute(texto)
+    """Lee un archivo de sql/, reemplaza los parámetros (adultos, 18 años) y lo ejecuta."""
+    texto = (SQL_DIR / nombre).read_text(encoding="utf-8")
+    con.execute(render_sql(texto, CohortParams(min_age=18)))
 
 def test_concept_test_incluye_descendientes(con):
     correr_sql(con, "01_concept_sets.sql")
@@ -127,3 +130,58 @@ def tabla_de_atricion(con):
     filas= con.execute ("SELECT n_persons, n_excluded FROM atrittion ORDER BY step").fetchall()
     assert [f[0] for f in filas] == [7, 6, 5, 4, 3]
     assert [f[1] for f in filas] == [0, 1, 1, 1, 1]
+
+def test_render_sql_sustituye_todo():
+    sql = render_sql("{{min_dx}} {{min_age}} {{prior_days}} {{followup_days}}", CohortParams())
+    assert sql == "1 0 365 365"
+
+
+def test_render_sql_rechaza_parametros_no_enteros():
+    with pytest.raises(TypeError):
+        render_sql("{{min_dx}}", CohortParams(min_dx="1; DROP TABLE person"))
+
+
+def test_render_sql_avisa_si_queda_un_marcador():
+    with pytest.raises(ValueError):
+        render_sql("{{no_existe}}", CohortParams())
+
+
+def test_por_defecto_entran_todas_las_edades(con):
+    atricion = build_cohort(con)
+    assert atricion.n_persons.tolist() == [7, 6, 6, 5, 4]
+    personas = {r[0] for r in con.execute("SELECT person_id FROM cohort").fetchall()}
+    assert personas == {1, 2, 6, 7}
+
+
+def test_solo_adultos_con_min_age_18(con):
+    atricion = build_cohort(con, CohortParams(min_age=18))
+    assert atricion.n_persons.tolist() == [7, 6, 5, 4, 3]
+    personas = {r[0] for r in con.execute("SELECT person_id FROM cohort").fetchall()}
+    assert personas == {1, 6, 7}
+
+
+def test_un_bebe_queda_fuera_por_la_observacion_previa(con):
+    # Persona 8: nace 2019-12-01, su observación empieza al nacer y se le diagnostica a los 6 meses.
+    con.execute("""
+        INSERT INTO person VALUES (8, 8532, 2019, 12, 1);
+        INSERT INTO condition_occurrence VALUES (8, 1000, '2020-06-01');
+        INSERT INTO observation_period VALUES (8, '2019-12-01', '2024-12-31');
+        INSERT INTO drug_era VALUES (8, 2001, '2020-06-15');
+    """)
+    build_cohort(con)  # con 365 días de observación previa
+    assert 8 not in {r[0] for r in con.execute("SELECT person_id FROM cohort").fetchall()}
+    build_cohort(con, CohortParams(prior_days=0))
+    assert 8 in {r[0] for r in con.execute("SELECT person_id FROM cohort").fetchall()}
+
+
+def test_min_dx_2_deja_fuera_a_quien_tiene_un_solo_diagnostico(con):
+    build_cohort(con, CohortParams(min_dx=2))
+    personas = {r[0] for r in con.execute("SELECT person_id FROM cohort").fetchall()}
+    assert personas == {1, 6}
+
+
+def test_min_age_40_incluye_a_quien_tiene_exactamente_40(con):
+    atricion = build_cohort(con, CohortParams(min_age=40))
+    personas = {r[0] for r in con.execute("SELECT person_id FROM cohort").fetchall()}
+    assert personas == {1, 7}
+    assert "40" in atricion.description[2]
