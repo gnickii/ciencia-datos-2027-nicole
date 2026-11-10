@@ -67,3 +67,41 @@ WHERE EXISTS (
       AND de.drug_era_start_date >= s.index_date
       AND de.drug_era_start_date  <= s.index_date + INTERVAL 365 DAY 
 );
+
+-- Cohorte final: quién cumplió los cuatro criterios
+CREATE OR REPLACE TABLE cohort AS
+SELECT 
+    person_id,
+    index_date,
+    age_at_index,
+    CASE gender_concept_id
+        WHEN 8507 THEN 'M'
+        WHEN 8532 THEN 'F'
+        ELSE 'otro/desconocido'
+    END AS sex,
+    n_dx
+FROM cohort_step4;
+
+
+--Tabla de atrición: Personas que quedan tras cada paso
+CREATE OR REPLACE TABLE attrition AS 
+WITH steps AS (
+    SELECT 0 AS step, 'Todas las personas en la base OMOP' AS description,
+         (SELECT count(DISTINCT person_id) FROM person) AS n_persons
+    UNION ALL 
+    SELECT 1, 'Con al menos 1 diagnóstico de epilepsia', (SELECT count(*) FROM cohort_step1)
+    UNION ALL
+    SELECT 2, 'Edad >= 18 años en la fecha índice', (SELECT count(*)FROM cohort_step2)
+    UNION ALL
+    SELECT 3, '>= 365 días de observación previa', (SELECT count(*) FROM cohort_step3)
+    UNION ALL
+    SELECT 4, 'Antiepiléptico dentro de 365 días tras la fecha índice',
+           (SELECT count(*) FROM cohort_step4)
+)
+SELECT 
+    step,
+    description,
+    n_persons,
+    coalesce(lag(n_persons) OVER (ORDER BY step) - n_persons,0) AS n_excluded
+    FROM steps
+    ORDER BY step;

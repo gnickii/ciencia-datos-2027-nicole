@@ -105,3 +105,25 @@ def test_paso4_frontera_de_la_ventana_del_farmaco(con):
     assert 14 in personas
     assert 15 in personas
     assert 16 not in personas
+
+def test_tabla_cohorte_final(con):
+    correr_sql(con, "01_concept_sets.sql")
+    correr_sql(con, "02_cohorte.sql")
+    personas= {r[0] for r in con.execute("SELECT person_id FROM cohort").fetchall()}
+    assert personas == {1,6,7}
+
+def cohorte_edad_y_sexo(con):
+    correr_sql(con, "01_concept_sets.sql")
+    correr_sql(con, "02_cohorte.sql")
+    edad,sexo = con.execute (
+        "SELECT age_at_index, sex FROM cohort WHERE person_id = 1"
+    ).fetchone()
+    assert edad == 40
+    assert sexo == "F"
+
+def tabla_de_atricion(con):
+    correr_sql(con, "01_concept_sets.sql")
+    correr_sql(con, "02_cohorte.sql")
+    filas= con.execute ("SELECT n_persons, n_excluded FROM atrittion ORDER BY step").fetchall()
+    assert [f[0] for f in filas] == [7, 6, 5, 4, 3]
+    assert [f[1] for f in filas] == [0, 1, 1, 1, 1]
