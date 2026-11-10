@@ -53,3 +53,17 @@ WHERE EXISTS (
     AND op.observation_period_start_date <= s.index_date - INTERVAL 365 DAY
     AND op.observation_period_end_date >= s.index_date
 );
+
+--Paso 4: Inicia un antiepiléptico dentro de los 365 días posteriores a la fecha índice
+CREATE OR REPLACE TABLE cohort_step4 AS 
+SELECT s.*
+FROM cohort_step3 AS s
+WHERE EXISTS (
+    SELECT 1
+    FROM drug_era AS de
+    JOIN cs_antiepilepticos AS cs
+      ON cs.concept_id = de.drug_concept_id
+    WHERE de.person_id =s.person_id 
+      AND de.drug_era_start_date >= s.index_date
+      AND de.drug_era_start_date  <= s.index_date + INTERVAL 365 DAY 
+);

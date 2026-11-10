@@ -76,3 +76,32 @@ def test_paso3_frontera_de_365_días(con):
     assert 10 in personas 
     assert 11 not in personas
     assert 12 not in personas
+
+def test_paso4_con_antiepileptico(con):
+        correr_sql(con, "01_concept_sets.sql")
+        correr_sql(con,"02_cohorte.sql")
+        personas= {r[0] for r in con.execute("SELECT person_id FROM cohort_step4").fetchall()}
+        assert personas == {1,6,7}
+
+def test_paso4_frontera_de_la_ventana_del_farmaco(con):
+    con.execute("""
+        INSERT INTO person VALUES
+          (13, 8532, 1990, 1, 1), (14, 8532, 1990, 1, 1),
+          (15, 8532, 1990, 1, 1), (16, 8532, 1990, 1, 1);
+        INSERT INTO condition_occurrence VALUES
+          (13, 1000, '2020-06-01'), (14, 1000, '2020-06-01'),
+          (15, 1000, '2020-06-01'), (16, 1000, '2020-06-01');
+        INSERT INTO observation_period VALUES
+          (13, '2018-01-01', '2024-12-31'), (14, '2018-01-01', '2024-12-31'),
+          (15, '2018-01-01', '2024-12-31'), (16, '2018-01-01', '2024-12-31');
+        INSERT INTO drug_era VALUES
+          (13, 2001, '2020-05-31'), (14, 2001, '2020-06-01'),
+          (15, 2001, '2021-06-01'), (16, 2001, '2021-06-02');
+    """)
+    correr_sql(con,"01_concept_sets.sql")
+    correr_sql(con, "02_cohorte.sql")
+    personas= {r[0]for r in con.execute("SELECT person_id FROM cohort_step4").fetchall()}
+    assert 13 not in personas
+    assert 14 in personas
+    assert 15 in personas
+    assert 16 not in personas
