@@ -1,0 +1,17 @@
+# Entorno virtual y cachés de Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Datos pesados: se regeneran con Synthea + ETL-Synthea, no se versionan
+data/*.duckdb
+data/*.duckdb.wal
+data/*.db
+data/synthea/
+data/*.csv
+
+# Resultados regenerables (se pueden volver a crear con la CLI)
+resultados/*/
