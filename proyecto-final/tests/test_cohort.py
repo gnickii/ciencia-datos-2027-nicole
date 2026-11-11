@@ -1,4 +1,5 @@
-from pathlib import Path 
+from pathlib import Path
+
 import pytest
 
 from epilepsia_omop.cohort import CohortParams, build_cohort, render_sql
@@ -23,8 +24,9 @@ def test_concept_test_antiepilepticos_excluye_otros_farmacos(con):
 def test_paso_1_personas_con_epilepsia(con):
     correr_sql(con, "01_concept_sets.sql")
     correr_sql(con, "02_cohorte.sql")
-    personas = {r[0]for r in con.execute("SELECT person_id FROM cohort_step1").fetchall()}
-
+    personas = {r[0] for r in con.execute("SELECT person_id FROM cohort_step1").fetchall()}
+    assert personas == {1, 2, 3, 4, 6, 7}
+    
 def test_paso1_fecha_ìndice_es_el_primer_diagnostico(con):
     correr_sql(con, "01_concept_sets.sql")
     correr_sql(con, "02_cohorte.sql")
