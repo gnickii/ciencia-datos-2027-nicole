@@ -1,0 +1,11 @@
+   services:
+     pruebas:
+       build: .
+       command: pytest
+
+     cohorte:
+       build: .
+       command: python -m epilepsia_omop.cli --variante todas
+       volumes:
+         - ./data:/app/data
+         - ./resultados:/app/resultados
