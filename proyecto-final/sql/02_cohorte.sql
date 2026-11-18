@@ -1,6 +1,6 @@
 -- Todos los diagnósticos de epilepsia de de cada persona 
 -- Une los diganosticos con la lista cs_epilepsia (creada en 01_concept_sets.sql
-CREATE OR REPLACE TABLE dx_epilepsia AS
+CREATE OR REPLACE TEMP TABLE dx_epilepsia AS
 SELECT co.person_id, co.condition_start_date AS dx_date
 FROM condition_occurrence AS co
 JOIN cs_epilepsia AS cs
@@ -8,7 +8,7 @@ ON cs.concept_id= co.condition_concept_id;
 
 --Paso 1: personas con epilepsia
 -- La fecha índice es la fecha de su primer diagnóstico.
-CREATE OR REPLACE TABLE cohort_step1 AS
+CREATE OR REPLACE TEMP TABLE cohort_step1 AS
 SELECT
     person_id,
     min(dx_date) AS index_date,
@@ -18,7 +18,7 @@ GROUP BY person_id
 HAVING count(*)>= {{min_dx}};
 
 -- Paso 2: edad en la fecha índice (años completos). Solo se quedan mayores de edad
-CREATE OR REPLACE TABLE cohort_step2 AS
+CREATE OR REPLACE TEMP TABLE cohort_step2 AS
 WITH con_edad AS (
     SELECT
         s.person_id,
@@ -43,7 +43,7 @@ WHERE age_at_index >= {{min_age}};
 
 
 --Paso 3:Observación continua previa a la fecha índice (365 días)
-CREATE OR REPLACE TABLE cohort_step3 AS
+CREATE OR REPLACE TEMP TABLE cohort_step3 AS
 SELECT s.*
 FROM cohort_step2 AS s
 WHERE EXISTS (
@@ -55,7 +55,7 @@ WHERE EXISTS (
 );
 
 --Paso 4: Inicia un antiepiléptico dentro de los 365 días posteriores a la fecha índice
-CREATE OR REPLACE TABLE cohort_step4 AS 
+CREATE OR REPLACE TEMP TABLE cohort_step4 AS 
 SELECT s.*
 FROM cohort_step3 AS s
 WHERE EXISTS (
@@ -69,7 +69,7 @@ WHERE EXISTS (
 );
 
 -- Cohorte final: quién cumplió los cuatro criterios
-CREATE OR REPLACE TABLE cohort AS
+CREATE OR REPLACE TEMP TABLE cohort AS
 SELECT 
     person_id,
     index_date,
@@ -84,7 +84,7 @@ FROM cohort_step4;
 
 
 --Tabla de atrición: Personas que quedan tras cada paso
-CREATE OR REPLACE TABLE attrition AS 
+CREATE OR REPLACE TEMP TABLE attrition AS 
 WITH steps AS (
     SELECT 0 AS step, 'Todas las personas en la base OMOP' AS description,
          (SELECT count(DISTINCT person_id) FROM person) AS n_persons

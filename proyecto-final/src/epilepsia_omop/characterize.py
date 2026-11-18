@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import duckdb 
+import duckdb
 import pandas as pd
 
 from epilepsia_omop.cohort import CohortParams, build_cohort, run_script

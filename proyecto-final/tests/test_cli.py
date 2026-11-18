@@ -46,3 +46,19 @@ def test_solo_adultos_tiene_menos_gente_que_el_principal(base_en_disco, tmp_path
     principal = pd.read_csv(out / "principal" / "attrition.csv")["n_persons"].iloc[-1]
     adultos = pd.read_csv(out / "solo_adultos" / "attrition.csv")["n_persons"].iloc[-1]
     assert adultos == principal - 1  # se va la persona 2, nacida en 2015
+
+def test_connect_usa_el_esquema_de_dbt_si_existe(tmp_path):
+    ruta = tmp_path / "con_esquema.duckdb"
+    c = duckdb.connect(str(ruta))
+    c.execute("CREATE SCHEMA dbt_synthea_dev; CREATE TABLE dbt_synthea_dev.person (person_id INTEGER);")
+    c.execute("INSERT INTO dbt_synthea_dev.person VALUES (1), (2);")
+    c.close()
+    con = connect(ruta)
+    assert con.execute("SELECT count(*) FROM person").fetchone()[0] == 2  # sin escribir el esquema
+    con.close()
+
+
+def test_la_base_original_no_se_modifica(base_en_disco, tmp_path):
+    antes = base_en_disco.stat().st_mtime_ns
+    main(["--db", str(base_en_disco), "--out", str(tmp_path / "salida")])
+    assert base_en_disco.stat().st_mtime_ns == antes

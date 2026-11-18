@@ -1,0 +1,39 @@
+name: proyecto-final
+
+on:
+  push:
+    branches: [main, reconstruccion]
+    paths:
+      - "proyecto-final/**"
+      - ".github/workflows/proyecto-final.yml"
+  pull_request:
+    paths:
+      - "proyecto-final/**"
+      - ".github/workflows/proyecto-final.yml"
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: proyecto-final
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar el proyecto
+        run: pip install -e ".[dev]"
+      - name: Revisar estilo
+        run: ruff check .
+      - name: Correr pruebas
+        run: pytest
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construir la imagen
+        run: docker compose -f proyecto-final/compose.yml build
+      - name: Correr las pruebas dentro de Docker
+        run: docker compose -f proyecto-final/compose.yml run --rm pruebas

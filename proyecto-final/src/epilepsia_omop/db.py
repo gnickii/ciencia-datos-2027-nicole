@@ -1,22 +1,26 @@
-"""Conexion a la base OMOP en DuckDB"""
-
-from __future__ import annotations
-
+"""Conexión a la base OMOP en DuckDB (solo lectura)."""
 from pathlib import Path
 
 import duckdb
 
-# data/OMOP.duckdb, en la raíz de proyecto-final
-DEFAULT_DB= Path (__file__).resolve().parents[2] / "data" / "OMOP.duckdb"
+DEFAULT_DB = Path(__file__).resolve().parents[2] / "data" / "omop.duckdb"
+OMOP_SCHEMA = "dbt_synthea_dev"
 
 
-def connect (path: Path | str | None= None) -> duckdb.DuckDBPyConnection:
-    """Abre la base OMOP. Fala si el archivo no existe"""
-    ruta = Path (path) if path else DEFAULT_DB
+def connect(path=None) -> duckdb.DuckDBPyConnection:
+    """Abre la base en solo lectura y apunta al esquema de dbt si existe."""
+    ruta = Path(path) if path else DEFAULT_DB
     if not ruta.exists():
         raise FileNotFoundError(
-            f'No encuentra la base OMOP en {ruta}.'
-            "Genera los datos con Synthea + ETL-Synthea o indica otra ruta con --db."
+            f"No encuentro la base OMOP en {ruta}. Pásala con --db."
         )
-    return duckdb.connect(str(ruta))
-
+    con = duckdb.connect(str(ruta), read_only=True)
+    esquemas = {
+        r[0]
+        for r in con.execute(
+            "SELECT schema_name FROM information_schema.schemata"
+        ).fetchall()
+    }
+    if OMOP_SCHEMA in esquemas:
+        con.execute(f"SET schema = '{OMOP_SCHEMA}'")
+    return con

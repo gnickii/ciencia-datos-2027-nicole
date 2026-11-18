@@ -1,9 +1,14 @@
-from pathlib import Path 
+from pathlib import Path
+
 import pytest
 
 from epilepsia_omop.cohort import CohortParams, build_cohort, render_sql
 
 SQL_DIR= Path (__file__).resolve().parents[1]/"sql"
+
+def _ids(con, sql):
+    """Ejecuta una consulta de una columna y devuelve sus valores como conjunto."""
+    return {r[0] for r in con.execute(sql).fetchall()}
 
 def correr_sql(con, nombre):
     """Lee un archivo de sql/, reemplaza los parámetros (adultos, 18 años) y lo ejecuta."""
@@ -13,17 +18,18 @@ def correr_sql(con, nombre):
 def test_concept_test_incluye_descendientes(con):
     correr_sql(con, "01_concept_sets.sql")
     ids= {r[0] for r in con.execute("SELECT concept_id FROM cs_epilepsia").fetchall()}
-    assert ids == {1000, 1001}
+    assert ids == {1000, 1001, 1003}
 
 def test_concept_test_antiepilepticos_excluye_otros_farmacos(con):
     correr_sql(con, "01_concept_sets.sql")
     ids= {r[0]for r in con.execute("SELECT concept_id FROM cs_antiepilepticos").fetchall()}
-    assert ids == {2001, 2002}
+    assert ids == {2001, 2002, 2004}
 
 def test_paso_1_personas_con_epilepsia(con):
     correr_sql(con, "01_concept_sets.sql")
     correr_sql(con, "02_cohorte.sql")
-    personas = {r[0]for r in con.execute("SELECT person_id FROM cohort_step1").fetchall()}
+    personas = {r[0] for r in con.execute("SELECT person_id FROM cohort_step1").fetchall()}
+    assert personas == {1, 2, 3, 4, 6, 7}
 
 def test_paso1_fecha_ìndice_es_el_primer_diagnostico(con):
     correr_sql(con, "01_concept_sets.sql")
@@ -185,3 +191,27 @@ def test_min_age_40_incluye_a_quien_tiene_exactamente_40(con):
     personas = {r[0] for r in con.execute("SELECT person_id FROM cohort").fetchall()}
     assert personas == {1, 7}
     assert "40" in atricion.description[2]
+
+def test_la_eclampsia_no_es_epilepsia(con):
+    # Persona 8: solo tiene eclampsia; aunque SNOMED la cuelga de "trastorno convulsivo", no entra.
+    con.execute("""
+        INSERT INTO person VALUES (8, 8532, 1995, 1, 1);
+        INSERT INTO condition_occurrence VALUES (8, 1004, '2020-06-01');
+        INSERT INTO observation_period VALUES (8, '2018-01-01', '2024-12-31');
+        INSERT INTO drug_era VALUES (8, 2001, '2020-06-15');
+    """)
+    build_cohort(con)
+    assert 8 not in _ids(con, "SELECT person_id FROM cohort")
+    assert _ids(con, "SELECT concept_id FROM cs_epilepsia") == {1000, 1001, 1003}
+
+
+def test_cualquier_antiepileptico_del_grupo_atc_n03_cuenta(con):
+    # Persona 9: epilepsia + pregabalina (2004), que no estaba en la lista de dos nombres de antes.
+    con.execute("""
+        INSERT INTO person VALUES (9, 8532, 1990, 1, 1);
+        INSERT INTO condition_occurrence VALUES (9, 1000, '2020-06-01');
+        INSERT INTO observation_period VALUES (9, '2018-01-01', '2024-12-31');
+        INSERT INTO drug_era VALUES (9, 2004, '2020-06-15');
+    """)
+    build_cohort(con)
+    assert 9 in _ids(con, "SELECT person_id FROM cohort")

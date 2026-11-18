@@ -1,5 +1,5 @@
 --Tabla 1a: Cohorte por sexo 
-CREATE OR REPLACE TABLE table1_sexo AS
+CREATE OR REPLACE TEMP TABLE table1_sexo AS
 SELECT 
     sex,
     count(*) AS n,
@@ -9,7 +9,7 @@ GROUP BY sex
 ORDER BY sex;
 
 --Tabla 1b: Cohorte por edad a la fecha índice
-CREATE OR REPLACE TABLE table1_edad AS
+CREATE OR REPLACE TEMP TABLE table1_edad AS
 SELECT
   CASE
     WHEN age_at_index < 18 THEN '0-17'
@@ -23,7 +23,7 @@ GROUP BY grupo_edad
 ORDER BY min(age_at_index);
 
 --Tabla 2: primer antiepiléptico durante la primer ventana de tratamiento por paciente
-CREATE OR REPLACE TABLE primer_aed AS
+CREATE OR REPLACE TEMP TABLE primer_aed AS
 WITH aed_en_ventana AS (
   SELECT
     co.person_id,
