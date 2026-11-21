@@ -87,8 +87,14 @@ proyecto-final/
 │   └── cli.py                  # línea de comandos y variantes de sensibilidad
 ├── scripts/                    # exploración rápida de la base OMOP
 ├── tests/                      # pruebas con una base OMOP de juguete en memoria
+├── notebooks/figuras.ipynb     # genera las figuras a partir de resultados/
+├── figuras/                    # figuras del análisis (PNG, sí se versionan)
+├── docs/
+│   ├── protocolo.md            # pregunta, población y método
+│   └── features.md             # diccionario de datos
 ├── data/                       # omop.duckdb (no se versiona)
 ├── resultados/<variante>/      # CSV generados (no se versionan)
+├── AI_USE.md                   # declaración de uso de asistentes de IA
 ├── Dockerfile
 └── compose.yml
 ```
@@ -181,6 +187,19 @@ Cada variante escribe en `resultados/<variante>/`:
 - `attrition.csv`: personas que quedan y se excluyen en cada paso.
 - `table1_sexo.csv`, `table1_edad.csv`: distribución de la cohorte.
 - `primer_aed.csv`: primer antiepiléptico dentro de la ventana de seguimiento.
+
+## Figuras
+
+`notebooks/figuras.ipynb` lee los CSV de `resultados/` y guarda cinco figuras en
+`figuras/`: atrición, sexo, grupo de edad, primer antiepiléptico y tamaño de la
+cohorte en las cinco variantes. Requiere haber corrido antes la CLI con
+`--variante todas`.
+
+```bash
+pip install -e ".[dev,notebooks]"
+```
+
+El notebook solo dibuja; la lógica de la cohorte vive en `sql/` y `src/`.
 
 ## Pruebas y estilo
 

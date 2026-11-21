@@ -18,6 +18,10 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.5",
 ]
+notebooks = [
+    "matplotlib>=3.8",
+    "ipykernel>=6.29",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
