@@ -110,6 +110,14 @@ La base OMOP no está en el repositorio. Para reproducirla:
    proceso mientras dbt corre.
 4. Guardar el resultado como `data/omop.duckdb`.
 
+**Fuentes, versiones y fechas de descarga**
+
+| Fuente | Versión | Descarga |
+|---|---|---|
+| Synthea (JAR) | v3.0.0 | 11 de noviembre de 2026 |
+| Vocabularios de Athena | v5.0 29-AUG-26 (RxNorm 20260601, ATC 2026-02-01, SNOMED 2026-02-01 International / 2026-03-01 US / 2026-04-08 UK) | 11 de noviembre de 2026 |
+| OHDSI/dbt-synthea | commit '33fdbfa' | 11 de noviembre de 2026 |
+
 Si la base tiene el esquema `dbt_synthea_dev`, la conexión lo usa
 automáticamente. La base siempre se abre en **solo lectura**: las tablas de la
 cohorte se crean como tablas temporales.
